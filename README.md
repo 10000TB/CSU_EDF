@@ -3,7 +3,9 @@
 EDF Wikipage: http://www.cs.colostate.edu/EDF
 
 /BigQuery Related/ : Programs and documents related to BigQuery.
- - Currently empty
+ - /Bigquery Related/google-api-java-client/ : Google Client API Java Library.
+ - /Bigquery Related/bigquery-api-java-services/ : Google Bigquery Services API Java Library.
+ - /BigQuery Related/Sample Bigquery/ : Example Java program using basic BigQuery features.
  
 /commons-math3-3.5/ : Apache common math library. 
  - /Sample Python Scripts/Java/BatchProcessRawData.java is using this library.
