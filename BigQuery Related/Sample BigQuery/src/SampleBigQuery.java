@@ -110,6 +110,15 @@ public class SampleBigQuery {
 
     // Return and display the results of the Query Job
     displayQueryResults(bigquery, PROJECT_ID, completedJob);
+    
+    String querySql2 = "SELECT platform_id FROM [earth-outreach:airview.avall_two] GROUP BY platform_id";
+    JobReference jobId2 = startQuery(bigquery, PROJECT_ID, querySql2);
+
+    // Poll for Query Results, return result output
+    Job completedJob2 = checkQueryResults(bigquery, PROJECT_ID, jobId2);
+
+    // Return and display the results of the Query Job
+    displayQueryResults(bigquery, PROJECT_ID, completedJob2);
 
   }
 
