@@ -50,7 +50,7 @@ import java.util.List;
 /**
  * Example of authorizing with BigQuery and reading from a public dataset.
  */
-public class SampleBigQuery {
+public class BigQueryConnector {
 
   // [START credentials]
   /////////////////////////
