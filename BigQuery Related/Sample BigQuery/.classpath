@@ -40,6 +40,7 @@
 	<classpathentry kind="lib" path="C:/Users/pinkmaggot/Desktop/SummerProject/CSUMS_SummerProject/BigQuery Related/google-api-java-client/libs/transaction-api-1.1.jar"/>
 	<classpathentry kind="lib" path="C:/Users/pinkmaggot/Desktop/SummerProject/CSUMS_SummerProject/BigQuery Related/google-api-java-client/libs/xpp3-1.1.4c.jar"/>
 	<classpathentry kind="lib" path="C:/Users/pinkmaggot/Desktop/SummerProject/CSUMS_SummerProject/BigQuery Related/bigquery-api-java-services/google-api-services-bigquery-v2-rev215-1.20.0.jar"/>
-	<classpathentry kind="lib" path="C:/Users/pinkmaggot/Desktop/Test/javax.servlet.jar"/>
+	<classpathentry kind="lib" path="C:/Users/pinkmaggot/Desktop/SummerProject/CSUMS_SummerProject/BigQuery Related/javax.servlet.jar"/>
+	<classpathentry kind="lib" path="C:/Users/pinkmaggot/Desktop/SummerProject/CSUMS_SummerProject/BigQuery Related/json-simple-1.1.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

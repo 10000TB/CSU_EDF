@@ -63,14 +63,14 @@ public class BigQueryConnector {
   // Then, add the Project ID below, and point the CLIENTSECRETS_LOCATION file
   // to the file you downloaded.
   /////////////////////////
-  private static final String PROJECT_ID = "csumssummerproject";
-  private static final String CLIENTSECRETS_LOCATION = "C:/Users/pinkmaggot/Desktop/Test/OAuth/client_secrets1.json";
+  private static String PROJECT_ID = "csumssummerproject";
+  private static String CLIENTSECRETS_LOCATION = "C:/Users/pinkmaggot/Desktop/Test/OAuth/client_secrets1.json";
 
   static GoogleClientSecrets clientSecrets = loadClientSecrets();
 
     // Static variables for API scope, callback URI, and HTTP/JSON functions
   private static final List<String> SCOPES = Arrays.asList(BigqueryScopes.BIGQUERY);
-  private static final String REDIRECT_URI = "urn:ietf:wg:oauth:2.0:oob";
+  private static String REDIRECT_URI = "urn:ietf:wg:oauth:2.0:oob";
 
   /** Global instances of HTTP transport and JSON factory objects. */
   private static final HttpTransport TRANSPORT = new NetHttpTransport();
@@ -79,7 +79,7 @@ public class BigQueryConnector {
   private static GoogleAuthorizationCodeFlow flow = null;
 
     /** Directory to store user credentials. */
-  private static final java.io.File DATA_STORE_DIR =
+  private static java.io.File DATA_STORE_DIR =
       new java.io.File("C:/Users/pinkmaggot/Desktop/Test/OAuth/bq_sample/");
 
   /**
@@ -87,12 +87,20 @@ public class BigQueryConnector {
    * globally shared instance across your application.
    */
   private static FileDataStoreFactory dataStoreFactory;
-
+  
+  public BigQueryConnector(String ProjectID, String SecretPath, String RedirectURI, String DataPath){
+	  PROJECT_ID = ProjectID;
+	  CLIENTSECRETS_LOCATION = SecretPath;
+	  REDIRECT_URI = RedirectURI;
+	  DATA_STORE_DIR = new java.io.File(DataPath);
+  }
+  
+  /* FOR TEST USE
   /**
    * @param args
    * @throws IOException
    * @throws InterruptedException
-   */
+   
   public static void main(String[] args) throws IOException, InterruptedException {
     // Create a new BigQuery client authorized via OAuth 2.0 protocol
     // dataStoreFactory = new FileDataStoreFactory(DATA_STORE_DIR);
@@ -119,8 +127,8 @@ public class BigQueryConnector {
 
     // Return and display the results of the Query Job
     displayQueryResults(bigquery, PROJECT_ID, completedJob2);
-
   }
+  */
 
   /** Authorizes the installed application to access user's protected data. */
   private static Credential authorize() throws IOException {
@@ -184,7 +192,7 @@ public class BigQueryConnector {
    */
   public static JobReference startQuery(Bigquery bigquery, String projectId,
                                         String querySql) throws IOException {
-    System.out.format("\nInserting Query Job: %s\n", querySql);
+    //System.out.format("\nInserting Query Job: %s\n", querySql);
 
     Job job = new Job();
     JobConfiguration config = new JobConfiguration();
@@ -198,7 +206,7 @@ public class BigQueryConnector {
     insert.setProjectId(projectId);
     JobReference jobId = insert.execute().getJobReference();
 
-    System.out.format("\nJob ID of Query Job is: %s\n", jobId.getJobId());
+    //System.out.format("\nJob ID of Query Job is: %s\n", jobId.getJobId());
 
     return jobId;
   }
@@ -213,7 +221,7 @@ public class BigQueryConnector {
    * @throws IOException
    * @throws InterruptedException
    */
-  private static Job checkQueryResults(Bigquery bigquery, String projectId, JobReference jobId)
+  public static Job checkQueryResults(Bigquery bigquery, String projectId, JobReference jobId)
       throws IOException, InterruptedException {
     // Variables to keep track of total query time
     long startTime = System.currentTimeMillis();
@@ -222,15 +230,15 @@ public class BigQueryConnector {
     while (true) {
       Job pollJob = bigquery.jobs().get(projectId, jobId.getJobId()).execute();
       elapsedTime = System.currentTimeMillis() - startTime;
-      System.out.format("Job status (%dms) %s: %s\n", elapsedTime,
-          jobId.getJobId(), pollJob.getStatus().getState());
+      //System.out.format("Job status (%dms) %s: %s\n", elapsedTime,
+      //    jobId.getJobId(), pollJob.getStatus().getState());
       if (pollJob.getStatus().getState().equals("DONE")) {
         return pollJob;
       }
       // Pause execution for one second before polling job status again, to
       // reduce unnecessary calls to the BigQUery API and lower overall
       // application bandwidth.
-      Thread.sleep(1000);
+      Thread.sleep(100);
     }
   }
   // [END start_query]
@@ -244,7 +252,7 @@ public class BigQueryConnector {
    * @param completedJob to the completed Job
    * @throws IOException
    */
-  private static void displayQueryResults(Bigquery bigquery,
+  public static void displayQueryResults(Bigquery bigquery,
                                           String projectId, Job completedJob) throws IOException {
     GetQueryResultsResponse queryResult = bigquery.jobs()
         .getQueryResults(
@@ -283,5 +291,8 @@ public class BigQueryConnector {
     return null;
   }
 
+  public static String getProjectID(){
+	  return PROJECT_ID;
+  }
 
 }
