@@ -95,17 +95,16 @@ public class BigQueryConnector {
 	  DATA_STORE_DIR = new java.io.File(DataPath);
   }
   
-  /* FOR TEST USE
   /**
    * @param args
    * @throws IOException
    * @throws InterruptedException
-   
+   */
   public static void main(String[] args) throws IOException, InterruptedException {
     // Create a new BigQuery client authorized via OAuth 2.0 protocol
     // dataStoreFactory = new FileDataStoreFactory(DATA_STORE_DIR);
     Bigquery bigquery = createAuthorizedClient();
-
+    
     // Print out available datasets in the "publicdata" project to the console
     listDatasets(bigquery, "earth-outreach");
 
@@ -119,16 +118,16 @@ public class BigQueryConnector {
     // Return and display the results of the Query Job
     displayQueryResults(bigquery, PROJECT_ID, completedJob);
     
-    String querySql2 = "SELECT platform_id FROM [earth-outreach:airview.avall_two] GROUP BY platform_id";
+    String querySql2 = "SELECT * FROM [earth-outreach:airview.avall_two] LIMIT 100";
     JobReference jobId2 = startQuery(bigquery, PROJECT_ID, querySql2);
-
-    // Poll for Query Results, return result output
     Job completedJob2 = checkQueryResults(bigquery, PROJECT_ID, jobId2);
-
-    // Return and display the results of the Query Job
     displayQueryResults(bigquery, PROJECT_ID, completedJob2);
+    
+    String querySql3 = "SELECT * FROM [earth-outreach:airview.avall_two] LIMIT 1000";
+    JobReference jobId3 = startQuery(bigquery, PROJECT_ID, querySql3);
+    Job completedJob3 = checkQueryResults(bigquery, PROJECT_ID, jobId3);
+    displayQueryResults(bigquery, PROJECT_ID, completedJob3);
   }
-  */
 
   /** Authorizes the installed application to access user's protected data. */
   private static Credential authorize() throws IOException {
@@ -226,12 +225,11 @@ public class BigQueryConnector {
     // Variables to keep track of total query time
     long startTime = System.currentTimeMillis();
     long elapsedTime;
-
+    
     while (true) {
       Job pollJob = bigquery.jobs().get(projectId, jobId.getJobId()).execute();
       elapsedTime = System.currentTimeMillis() - startTime;
-      //System.out.format("Job status (%dms) %s: %s\n", elapsedTime,
-      //    jobId.getJobId(), pollJob.getStatus().getState());
+      //System.out.format("Job status (%dms) %s: %s\n", elapsedTime, jobId.getJobId(), pollJob.getStatus().getState());
       if (pollJob.getStatus().getState().equals("DONE")) {
         return pollJob;
       }
@@ -264,9 +262,9 @@ public class BigQueryConnector {
     System.out.print("\nQuery Results:\n------------\n");
     for (TableRow row : rows) {
       for (TableCell field : row.getF()) {
-      System.out.printf("%-50s", field.getV());
-       }
-      System.out.println();
+    	System.out.printf("%-50s", field.getV());
+      }
+      //System.out.println();
     }
   }
   // [END display_result]
