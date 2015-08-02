@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012 Google Inc.
+ * Copyright (c) 2012 Google Inc. Modified by Duck Keun Yang
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -64,7 +64,7 @@ public class BigQueryConnector {
   // to the file you downloaded.
   /////////////////////////
   private static String PROJECT_ID = "csumssummerproject";
-  private static String CLIENTSECRETS_LOCATION = "C:/Users/pinkmaggot/Desktop/Test/OAuth/client_secrets1.json";
+  private static String CLIENTSECRETS_LOCATION = "C:/Users/tarto_000/Documents/workspacejava/SummerProject/client_secret.json";
 
   static GoogleClientSecrets clientSecrets = loadClientSecrets();
 
@@ -80,7 +80,7 @@ public class BigQueryConnector {
 
     /** Directory to store user credentials. */
   private static java.io.File DATA_STORE_DIR =
-      new java.io.File("C:/Users/pinkmaggot/Desktop/Test/OAuth/bq_sample/");
+      new java.io.File("C:/Users/tarto_000/Documents/workspacejava/SummerProject/");
 
   /**
    * Global instance of the {@link DataStoreFactory}. The best practice is to make it a single
@@ -264,7 +264,7 @@ public class BigQueryConnector {
       for (TableCell field : row.getF()) {
     	System.out.printf("%-50s", field.getV());
       }
-      //System.out.println();
+      System.out.println();
     }
   }
   // [END display_result]

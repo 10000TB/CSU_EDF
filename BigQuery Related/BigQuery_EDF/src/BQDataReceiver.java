@@ -9,8 +9,6 @@ import java.util.HashMap;
 import java.util.List;
 
 import org.json.simple.*;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 import com.google.api.services.bigquery.Bigquery;
@@ -21,6 +19,7 @@ import com.google.api.services.bigquery.model.TableCell;
 import com.google.api.services.bigquery.model.TableRow;
 
 public class BQDataReceiver {
+	//// Change before execute ----
 	/** To change BigQuery ProjectID, modify BigQueryConnecor class. */
 	private static final String ProjectID = BigQueryConnector.getProjectID();
 	
@@ -28,14 +27,15 @@ public class BQDataReceiver {
 	private static final String TableID = "earth-outreach:airview.avall_two";
 	
 	/** Path to the file which will store platform_id list and corresponding epoch_time */
-	private static final String pidListPath = "C:/Users/pinkmaggot/Desktop/Test/pidList";
+	private static final String pidListPath = "C:/Users/tarto_000/Documents/workspacejava/SummerProject/pidList";
 	
 	/** Path to the directory data will be stored */
-	private static final String tmpDataDir = "C:/Users/pinkmaggot/Desktop/Test/";
+	private static final String tmpDataDir = "C:/Users/tarto_000/Documents/workspacejava/SummerProject/";
 	
 	/** Interval for checking update */
 	private static final int Interval = 60000;
-
+	///// -------------------------
+	
 	// static variables for internal use
 	private static HashMap<String, Double> tmppidlist = new HashMap<String, Double>();
 	private static boolean EXIT_BIT = false;
@@ -45,7 +45,7 @@ public class BQDataReceiver {
 		try {
 			bigquery = BigQueryConnector.createAuthorizedClient();
 			initPIDList(bigquery); // Initial run
-			System.out.println("SYSTEM: Sleep("+Interval+")");
+			System.out.println("SYSTEM: Sleep("+Interval+")ms");
 			Thread.sleep(Interval);
 			refreshPlatformIDList(bigquery); // Starting a thread...
 		} catch (Exception e) {
@@ -108,8 +108,7 @@ public class BQDataReceiver {
 	 *
 	 * @param Bigquery
 	 * @return List<TableRow>
-	 * @throws Exception
-	 */
+	 * @throws Exception	 */
 	private static List<TableRow> getPlatformIDList(Bigquery bq) throws Exception{
 		System.out.println("SYSTEM: Retrieving platform_ids from Big Query("+TableID+")");
 		String querySql = "SELECT platform_id FROM ["+TableID+"] GROUP BY platform_id";
@@ -149,10 +148,13 @@ public class BQDataReceiver {
 		System.out.println("SYSTEM: Retrieving data from Big Query("+TableID+")");
 		JSONArray tmpjsonarray = new JSONArray();
 		for(String k : tmppidlist.keySet()){
-			String querySql = "SELECT * FROM ["+TableID+"] WHERE platform_id='"+k+"' AND epoch_time>"+tmppidlist.get(k)+" ORDER BY epoch_time ASC LIMIT 8750";
+			String querySql = "SELECT * FROM ["+TableID+"] WHERE platform_id='"+ k+"' AND epoch_time>"+tmppidlist.get(k)+" ORDER BY epoch_time ASC LIMIT 8750";
 			System.out.println(querySql);
 			boolean noUpdate = false;
+			long startTime = System.currentTimeMillis();
+		    long elapsedTime;
 			List<TableRow> rows = processQuery(bq, querySql);
+			System.out.println("SYSTEM: "+rows.size()+" rows selected.");
 			if(rows==null){
 				System.out.println("SYSTEM: The data of platform_id("+k+") is up to date.");
 			}else{
@@ -164,6 +166,7 @@ public class BQDataReceiver {
 					for (TableCell field : row.getF()) {
 						if(field.getV().toString().contains("java.lang.Object@")){
 							// quick fix for toString() bug on getV() method..
+							// cannot properly convert to string when its null
 							tmps+="null\t";
 						}else{
 							tmps+=field.getV().toString()+"\t";
@@ -192,7 +195,8 @@ public class BQDataReceiver {
 				dataWriter.close();
 				tmppidlist.put(k, max);
 				if(!noUpdate){
-					System.out.println("SYSTEM: The data of platform_id("+k+") has successfully saved to the file("+tmpDataDir+k+").");
+					elapsedTime = System.currentTimeMillis() - startTime;
+					System.out.println("SYSTEM: "+elapsedTime+"ms. The data of platform_id("+k+") has successfully saved to the file("+tmpDataDir+k+").");
 					noUpdate = false;
 				}
 			}
@@ -226,7 +230,7 @@ public class BQDataReceiver {
 							writeJSONPIDList(tmppidlist);
 						}
 						retrieveData(bq);
-						System.out.println("SYSTEM: Sleep("+Interval+")");
+						System.out.println("SYSTEM: Sleep("+Interval+"ms)");
 						Thread.sleep(Interval);
 					}
 				} catch (Exception e) {
