@@ -1,4 +1,10 @@
-import java.io.File;
+/*
+ * CSU EDF Project, written by Duck Keun Yang. 2015-08-02
+ * 
+ * This program periodically checks BigQuery table for any update and store the data into local storage.
+ */
+
+import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -11,58 +17,111 @@ import java.util.List;
 import org.json.simple.*;
 import org.json.simple.parser.JSONParser;
 
-import com.google.api.services.bigquery.Bigquery;
-import com.google.api.services.bigquery.model.GetQueryResultsResponse;
-import com.google.api.services.bigquery.model.Job;
-import com.google.api.services.bigquery.model.JobReference;
 import com.google.api.services.bigquery.model.TableCell;
 import com.google.api.services.bigquery.model.TableRow;
 
 public class BQDataReceiver {
-	//// Change before execute ----
-	/** To change BigQuery ProjectID, modify BigQueryConnecor class. */
-	private static final String ProjectID = BigQueryConnector.getProjectID();
 	
 	/** Name of the table in BigQuery */
-	private static final String TableID = "earth-outreach:airview.avall_two";
+	private String TableID;
 	
 	/** Path to the file which will store platform_id list and corresponding epoch_time */
-	private static final String pidListPath = "C:/Users/tarto_000/Documents/workspacejava/SummerProject/pidList";
+	private String pidListPath;
 	
 	/** Path to the directory data will be stored */
-	private static final String tmpDataDir = "C:/Users/tarto_000/Documents/workspacejava/SummerProject/";
-	
+	private String tmpDataDir;
+
 	/** Interval for checking update */
-	private static final int Interval = 60000;
-	///// -------------------------
+	private int Interval;
 	
 	// static variables for internal use
-	private static HashMap<String, Double> tmppidlist = new HashMap<String, Double>();
-	private static boolean EXIT_BIT = false;
+	private HashMap<String, Double> tmppidlist = new HashMap<String, Double>();
+	private BigQueryConnector bigqueryconnector;
+	private boolean EXIT_BIT = false;
 
+	// [START Constructor]
+	/**
+	 * Constructor of BigQueryConnector
+	 * 
+	 * @param BigQueryConnector
+	 * @param TableID // Specify a table to be used
+	 * @param Interval // Specify the time in ms to sleep between tasks 
+	 * @param pidListFilePath // File path that would be used for maintaining platform id list
+	 * @param dataDirectory // directory to store data from bigquery
+	 */
+	public BQDataReceiver(BigQueryConnector bqc, String TableID, int interval, String pidListFilePath, String dataDirectory){
+		bigqueryconnector = bqc;
+		this.TableID = TableID;
+		this.Interval = interval;
+		this.pidListPath = pidListFilePath;
+		this.tmpDataDir = dataDirectory;
+	}
+	// [END Constructor]
+	
+	/**
+	 * For testing and showing usage purpose
+	 * @param args
+	 * @throws IOException
+	 * @throws InterruptedException
+	 */
 	public static void main(String[] args) {
-		Bigquery bigquery; // Google Bigquery API
+		/** To change BigQuery ProjectID, modify BigQueryConnecor class. */
+		String ProjectID = "csumssummerproject";
+		
+		/** Path to the Client Secret File */
+		String CLIENTSECRETS_LOCATION = "C:/Users/pinkmaggot/Desktop/Test/OAuth/clients_secrets.json";
+		
+		/** Redirect_URI from Google Developers Console */
+		String REDIRECT_URI = "urn:ietf:wg:oauth:2.0:oob";
+		
+		/** Directory to store user credential files */
+		String TMP_DIR = "C:/Users/pinkmaggot/Desktop/Test/OAuth/bq_sample/";
+		
+		/** Name of the table in BigQuery */
+		String tableID = "earth-outreach:airview.avall_two";
+		
+		/** Path to the file which will store platform_id list and corresponding epoch_time */
+		String pidlistpath = "C:/Users/pinkmaggot/Desktop/Test/pidList.json";
+		
+		/** Path to the directory data will be stored */
+		String datadir = "C:/Users/pinkmaggot/Desktop/Test/";
+		
+		/** Interval for checking update in ms */
+		int interval = 60000;
+		
+		BigQueryConnector bqc = new BigQueryConnector(ProjectID, CLIENTSECRETS_LOCATION, REDIRECT_URI, TMP_DIR);
+		BQDataReceiver bqdr = new BQDataReceiver(bqc, tableID, interval, pidlistpath, datadir);
+		bqdr.start();
+	}
+	// [END Main]
+ 
+	// [START start]
+	/**
+	 * Start retrieving data from bigquery table
+	 */
+	public void start(){
 		try {
-			bigquery = BigQueryConnector.createAuthorizedClient();
-			initPIDList(bigquery); // Initial run
+			initPIDList(bigqueryconnector); // Initial run
 			System.out.println("SYSTEM: Sleep("+Interval+")ms");
 			Thread.sleep(Interval);
-			refreshPlatformIDList(bigquery); // Starting a thread...
+			autoUpdate(bigqueryconnector); // Starting a thread...
 		} catch (Exception e) {
-			System.out.println("Error occured. "+e);
+			System.out.println("Error occured. Failed to start."+e);
 			e.printStackTrace();
 		}
 	}
-
+	// [END start]
+	
+	// [START initPIDList]
 	/**
 	 * Creates an platform_id list and store it into JSON formatted file.
 	 * 
 	 * This also calls retrieveData(Bigquery) to retrieve first set of data from Big Query Table
 	 *
-	 * @param Bigquery
+	 * @param BigQueryConnector
 	 * @throws Exception
 	 */
-	private static void initPIDList(Bigquery bq) throws Exception{
+	private void initPIDList(BigQueryConnector bqc) throws Exception{
 		System.out.println("SYSTEM: Initial platform_id list build started.");
 		Path path = Paths.get(pidListPath);
 		if (Files.exists(path)) {
@@ -77,52 +136,44 @@ public class BQDataReceiver {
 			}
 		}else{
 			System.out.println("SYSTEM: File("+pidListPath+") does not exists. Creating a new file...");
-			List<TableRow> rows = getPlatformIDList(bq);
+			List<TableRow> rows = getPlatformIDList(bqc);
 			for (TableRow row : rows) {
 				for (TableCell field : row.getF()) {
 					tmppidlist.put(field.getV().toString(), 0.0);
 				}
 			}
 			writeJSONPIDList(tmppidlist);
+			System.out.println("SYSTEM: Initial platform_id list has created.");
 		}
-		System.out.println("SYSTEM: Initial platform_id list has created.");
-		retrieveData(bq);
+		retrieveData(bqc);
 	}
-
-	/**
-	 * Sends a query to BigQuery, and return its result as List<TableRow>
-	 *
-	 * @param Bigquery, String
-	 * @return List<TableRow>
-	 * @throws Exception
-	 */
-	private static List<TableRow> processQuery(Bigquery bq, String querysql) throws Exception{
-		JobReference jobId = BigQueryConnector.startQuery(bq, ProjectID, querysql);
-		Job completedJob = BigQueryConnector.checkQueryResults(bq, ProjectID, jobId);
-		GetQueryResultsResponse queryResult = bq.jobs().getQueryResults(ProjectID, completedJob.getJobReference().getJobId()).execute();
-		return queryResult.getRows();
-	}
-
+	// [END initPIDList]
+	
+	// [START getPlatformIDList]
 	/**
 	 * Only executes single query, retrieve platform_ids from BigQuery table
 	 *
-	 * @param Bigquery
+	 * @param BigQueryConnector
 	 * @return List<TableRow>
 	 * @throws Exception	 */
-	private static List<TableRow> getPlatformIDList(Bigquery bq) throws Exception{
+	private List<TableRow> getPlatformIDList(BigQueryConnector bqc) throws Exception{
 		System.out.println("SYSTEM: Retrieving platform_ids from Big Query("+TableID+")");
 		String querySql = "SELECT platform_id FROM ["+TableID+"] GROUP BY platform_id";
 		System.out.println("SYSTEM: Starting query("+querySql+")...");
-		return processQuery(bq, querySql);
+		return bqc.processQuery(querySql);
 	}
-
+	// [END getPlatformIDList]
+	
+	
+	// [START writeJSONPIDList]
 	/**
 	 * Writes JSONArray into the file.
 	 *
 	 * @param JSONArray
 	 * @throws Exception
 	 */
-	private static void writeJSONPIDList(HashMap<String, Double> hm) throws Exception{
+	@SuppressWarnings("unchecked") // Because of JSON Object..
+	private void writeJSONPIDList(HashMap<String, Double> hm) throws Exception{
 		System.out.println("SYSTEM: Writing platform_id list into json file..");
 		FileWriter pidListFile = new FileWriter(pidListPath);
 		JSONArray tmp = new JSONArray();
@@ -136,87 +187,77 @@ public class BQDataReceiver {
 		pidListFile.flush();
 		pidListFile.close();
 	}
+	// [END writeJSONPIDList]
 
+	// [START retrieveData]
 	/**
 	 * Retrieves data from BigQuery table and stores it into the file.
 	 * Sends a query for each platform_id in platform_id list.
 	 *
-	 * @param Bigquery
+	 * @param BigQueryConnector
 	 * @throws Exception
 	 */
-	private static void retrieveData(Bigquery bq) throws Exception{
+	private void retrieveData(BigQueryConnector bqc) throws Exception{
 		System.out.println("SYSTEM: Retrieving data from Big Query("+TableID+")");
+		@SuppressWarnings("unused") // Because of JSONArray..
 		JSONArray tmpjsonarray = new JSONArray();
 		for(String k : tmppidlist.keySet()){
 			String querySql = "SELECT * FROM ["+TableID+"] WHERE platform_id='"+ k+"' AND epoch_time>"+tmppidlist.get(k)+" ORDER BY epoch_time ASC LIMIT 8750";
 			System.out.println(querySql);
-			boolean noUpdate = false;
 			long startTime = System.currentTimeMillis();
 		    long elapsedTime;
-			List<TableRow> rows = processQuery(bq, querySql);
-			System.out.println("SYSTEM: "+rows.size()+" rows selected.");
+			List<TableRow> rows = bqc.processQuery(querySql);
 			if(rows==null){
 				System.out.println("SYSTEM: The data of platform_id("+k+") is up to date.");
 			}else{
 				FileWriter dataWriter = new FileWriter(tmpDataDir+k, true);
+				BufferedWriter bfWriter = new BufferedWriter(dataWriter);
 				double max = tmppidlist.get(k);
 				for (TableRow row : rows) {
 					int i = 0;
 					String tmps = "";
 					for (TableCell field : row.getF()) {
 						if(field.getV().toString().contains("java.lang.Object@")){
-							// quick fix for toString() bug on getV() method..
+							// quick fix for toString() on getV() method..
 							// cannot properly convert to string when its null
 							tmps+="null\t";
 						}else{
 							tmps+=field.getV().toString()+"\t";
 						}
 						i+=1;
-						if(i==4){
+						if(i==8){
 							double tmp = Double.parseDouble(field.getV().toString());
 							if(tmp>=max){
 								max = tmp;
 							}
-							if( (tmp==max)&&(rows.size()==1) ){
-								// Some kind of bug in BigQuery API.. when there is only one row in result..
-								// this if statement is a quick fix for removing duplicate record in the file
-								System.out.println("SYSTEM: The data of platform_id("+k+") is up to date.");
-								noUpdate = true;
-								break;
-							}
 						}
 					}
-					if(!noUpdate){
-						dataWriter.write(tmps.substring(0, tmps.length()-1)+"\n");
-					}else{
-						dataWriter.write(tmps);
-					}
+					bfWriter.write(tmps.substring(0, tmps.length()-1)+"\n");
 				}
-				dataWriter.close();
+				bfWriter.close();
 				tmppidlist.put(k, max);
-				if(!noUpdate){
-					elapsedTime = System.currentTimeMillis() - startTime;
-					System.out.println("SYSTEM: "+elapsedTime+"ms. The data of platform_id("+k+") has successfully saved to the file("+tmpDataDir+k+").");
-					noUpdate = false;
-				}
+				elapsedTime = System.currentTimeMillis() - startTime;
+				System.out.println("SYSTEM: "+rows.size()+"rows / "+elapsedTime+"ms. The data of platform_id("+k+") has successfully saved to the file("+tmpDataDir+k+").");
 			}
 		}
 		writeJSONPIDList(tmppidlist);
 	}
-
+	// [END retrieveData]
+	
+	// [START autoUpdate]
 	/**
 	 * Starts a thread that repeatedly check if there is any update on BigQuery table.
 	 *
-	 * @param Bigquery
+	 * @param BigQueryConnector
 	 * @throws Exception
 	 */
-	private static void refreshPlatformIDList(final Bigquery bq){
+	private void autoUpdate(final BigQueryConnector bqc){
 		Thread t = new Thread(new Runnable() {           
 			public void run() { 
 				try {
 					while(!EXIT_BIT){
 						System.out.println("SYSTEM: Checking any update on Big Query("+TableID+")");
-						List<TableRow> rows = getPlatformIDList(bq);
+						List<TableRow> rows = getPlatformIDList(bqc);
 						boolean dataUpdated = false;
 						for (TableRow row : rows) {
 							for (TableCell field : row.getF()) {
@@ -229,7 +270,7 @@ public class BQDataReceiver {
 						if(dataUpdated){
 							writeJSONPIDList(tmppidlist);
 						}
-						retrieveData(bq);
+						retrieveData(bqc);
 						System.out.println("SYSTEM: Sleep("+Interval+"ms)");
 						Thread.sleep(Interval);
 					}
@@ -240,5 +281,5 @@ public class BQDataReceiver {
 		});
 		t.start();
 	}
-
+	// [END autoUpdate]
 }
