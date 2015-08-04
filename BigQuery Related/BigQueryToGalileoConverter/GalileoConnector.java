@@ -16,12 +16,6 @@ import galileo.net.NetworkDestination;
 import galileo.util.GeoHash;
 import galileo.util.PerformanceTimer;
 
-/**
- * Sample class that generates {@link Block} instances using random data and
- * streams the blocks to a Galileo cluster.
- *
- * @author malensek
- */
 public class GalileoConnector {
 
     private static Random randomGenerator = new Random(System.nanoTime());
@@ -29,7 +23,7 @@ public class GalileoConnector {
     private ClientMessageRouter messageRouter;
     private EventPublisher publisher;
 
-    public RandomBlocks() throws IOException {
+    public GalileoConnector() throws IOException {
         messageRouter = new ClientMessageRouter();
         publisher = new EventPublisher(messageRouter);
     }
@@ -125,7 +119,7 @@ public class GalileoConnector {
         int serverPort = Integer.parseInt(args[1]);
         int num = Integer.parseInt(args[2]);
 
-        RandomBlocks client = new RandomBlocks();
+        GalileoConnector client = new GalileoConnector();
         NetworkDestination server
             = new NetworkDestination(serverHostName, serverPort);
 
@@ -133,7 +127,7 @@ public class GalileoConnector {
         PerformanceTimer pt = new PerformanceTimer("Send operation time");
         pt.start();
         for (int i = 0; i < num; ++i) {
-            Block block = RandomBlocks.generateData();
+            Block block = GalileoConnector.generateData();
             client.store(server, block);
         }
         pt.stopAndPrint();
