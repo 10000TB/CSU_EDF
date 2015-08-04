@@ -1,7 +1,12 @@
-/*
- * CSU EDF Project, written by Duck Keun Yang. 2015-08-02
+/* 
+ * Copyright (c) 2014, Colorado State University. Written by Duck Keun Yang 2015-08-02
+ * 
+ * All rights reserved.
+ * 
+ * CSU EDF Project
  * 
  * This program periodically checks BigQuery table for any update and store the data into local storage.
+ * (further implementation will be storing data into galileo, not file)
  */
 
 import java.io.BufferedWriter;
@@ -22,32 +27,25 @@ import com.google.api.services.bigquery.model.TableRow;
 
 public class BQDataReceiver {
 	
-	/** Name of the table in BigQuery */
-	private String TableID;
-	
-	/** Path to the file which will store platform_id list and corresponding epoch_time */
-	private String pidListPath;
-	
-	/** Path to the directory data will be stored */
-	private String tmpDataDir;
-
-	/** Interval for checking update */
-	private int Interval;
-	
-	// static variables for internal use
-	private HashMap<String, Double> tmppidlist = new HashMap<String, Double>();
 	private BigQueryConnector bigqueryconnector;
-	private boolean EXIT_BIT = false;
+	private String TableID; // Name of the table in BigQuery
+	private String pidListPath; // Path to the file which will store platform_id list and corresponding epoch_time
+	private String tmpDataDir; // Path to the directory data will be stored
+	private int Interval; // Interval for checking update
+	
+	/** variables for internal use */
+	private HashMap<String, Double> tmppidlist = new HashMap<String, Double>();
+	
 
 	// [START Constructor]
 	/**
-	 * Constructor of BigQueryConnector
+	 * Constructor of BQDataReceiver
 	 * 
 	 * @param BigQueryConnector
-	 * @param TableID // Specify a table to be used
-	 * @param Interval // Specify the time in ms to sleep between tasks 
-	 * @param pidListFilePath // File path that would be used for maintaining platform id list
-	 * @param dataDirectory // directory to store data from bigquery
+	 * @param TableID			Specify a table to be used
+	 * @param Interval			Specify the time in ms to sleep between tasks 
+	 * @param pidListFilePath	File path that would be used for maintaining platform id list
+	 * @param dataDirectory		directory to store data from bigquery
 	 */
 	public BQDataReceiver(BigQueryConnector bqc, String TableID, int interval, String pidListFilePath, String dataDirectory){
 		bigqueryconnector = bqc;
@@ -60,11 +58,14 @@ public class BQDataReceiver {
 	
 	/**
 	 * For testing and showing usage purpose
+	 * 
 	 * @param args
 	 * @throws IOException
 	 * @throws InterruptedException
 	 */
 	public static void main(String[] args) {
+		
+		// Change before use! ----------------------------
 		/** To change BigQuery ProjectID, modify BigQueryConnecor class. */
 		String ProjectID = "csumssummerproject";
 		
@@ -88,16 +89,22 @@ public class BQDataReceiver {
 		
 		/** Interval for checking update in ms */
 		int interval = 60000;
+		// -----------------------------------------------
 		
+		// create BigQueryConnector
 		BigQueryConnector bqc = new BigQueryConnector(ProjectID, CLIENTSECRETS_LOCATION, REDIRECT_URI, TMP_DIR);
+		
+		// create BQDataReceiver
 		BQDataReceiver bqdr = new BQDataReceiver(bqc, tableID, interval, pidlistpath, datadir);
-		bqdr.start();
+		bqdr.start(); // start job
 	}
 	// [END Main]
  
 	// [START start]
 	/**
 	 * Start retrieving data from bigquery table
+	 * 
+	 * @throws Exception
 	 */
 	public void start(){
 		try {
@@ -114,9 +121,7 @@ public class BQDataReceiver {
 	
 	// [START initPIDList]
 	/**
-	 * Creates an platform_id list and store it into JSON formatted file.
-	 * 
-	 * This also calls retrieveData(Bigquery) to retrieve first set of data from Big Query Table
+	 * Creates an platform_id list and store it into JSON formatted file, and call retreiveData()
 	 *
 	 * @param BigQueryConnector
 	 * @throws Exception
@@ -145,13 +150,13 @@ public class BQDataReceiver {
 			writeJSONPIDList(tmppidlist);
 			System.out.println("SYSTEM: Initial platform_id list has created.");
 		}
-		retrieveData(bqc);
+		receiveData(bqc);
 	}
 	// [END initPIDList]
 	
 	// [START getPlatformIDList]
 	/**
-	 * Only executes single query, retrieve platform_ids from BigQuery table
+	 * Only executes a single pre-defined query, receive platform_ids from BigQuery table
 	 *
 	 * @param BigQueryConnector
 	 * @return List<TableRow>
@@ -164,12 +169,11 @@ public class BQDataReceiver {
 	}
 	// [END getPlatformIDList]
 	
-	
 	// [START writeJSONPIDList]
 	/**
-	 * Writes JSONArray into the file.
+	 * Writes HashMap<String,Double> into json formatted file.
 	 *
-	 * @param JSONArray
+	 * @param HashMap<String, Double>
 	 * @throws Exception
 	 */
 	@SuppressWarnings("unchecked") // Because of JSON Object..
@@ -189,15 +193,15 @@ public class BQDataReceiver {
 	}
 	// [END writeJSONPIDList]
 
-	// [START retrieveData]
+	// [START receiveData]
 	/**
-	 * Retrieves data from BigQuery table and stores it into the file.
+	 * receives data from BigQuery table and stores it into the file.
 	 * Sends a query for each platform_id in platform_id list.
 	 *
 	 * @param BigQueryConnector
 	 * @throws Exception
 	 */
-	private void retrieveData(BigQueryConnector bqc) throws Exception{
+	private void receiveData(BigQueryConnector bqc) throws Exception{
 		System.out.println("SYSTEM: Retrieving data from Big Query("+TableID+")");
 		@SuppressWarnings("unused") // Because of JSONArray..
 		JSONArray tmpjsonarray = new JSONArray();
@@ -242,7 +246,7 @@ public class BQDataReceiver {
 		}
 		writeJSONPIDList(tmppidlist);
 	}
-	// [END retrieveData]
+	// [END receiveData]
 	
 	// [START autoUpdate]
 	/**
@@ -255,7 +259,7 @@ public class BQDataReceiver {
 		Thread t = new Thread(new Runnable() {           
 			public void run() { 
 				try {
-					while(!EXIT_BIT){
+					while(true){
 						System.out.println("SYSTEM: Checking any update on Big Query("+TableID+")");
 						List<TableRow> rows = getPlatformIDList(bqc);
 						boolean dataUpdated = false;
@@ -270,7 +274,7 @@ public class BQDataReceiver {
 						if(dataUpdated){
 							writeJSONPIDList(tmppidlist);
 						}
-						retrieveData(bqc);
+						receiveData(bqc);
 						System.out.println("SYSTEM: Sleep("+Interval+"ms)");
 						Thread.sleep(Interval);
 					}

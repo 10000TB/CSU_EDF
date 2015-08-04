@@ -63,7 +63,7 @@ public class BigQueryConnector {
 	private String PROJECT_ID; // "csumssummerproject";
 	private String CLIENTSECRETS_LOCATION; // "C:/Users/pinkmaggot/Desktop/Test/OAuth/clients_secrets.json";
 
-	GoogleClientSecrets clientSecrets;
+	private GoogleClientSecrets clientSecrets;
 
 	// Static variables for API scope, callback URI, and HTTP/JSON functions
 	private final List<String> SCOPES = Arrays.asList(BigqueryScopes.BIGQUERY);
@@ -138,7 +138,6 @@ public class BigQueryConnector {
 
 		// Return and display the results of the Query Job
 		bqc.displayQueryResults(completedJob);
-		
 		
 		// example using processQuery method.
 		String querySql2 = "SELECT * FROM [earth-outreach:airview.avall_two] WHERE platform_id='10293' LIMIT 10";
