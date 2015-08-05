@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012 Google Inc. Modified by Duck Keun Yang
+ * Copyright (c) 2012 Google Inc. Modified by Duck Keun Yang for CSU EDF Project 2015-08-02
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -117,8 +117,9 @@ public class BigQueryConnector {
 	 * @param args
 	 * @throws IOException
 	 * @throws InterruptedException
+	 * @throws ClassNotFoundException 
 	 */
-	public static void main(String[] args) throws IOException, InterruptedException {
+	public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException {
 		String projid = "csumssummerproject";
 		String secretlocation = "C:/Users/pinkmaggot/Desktop/Test/OAuth/clients_secrets.json";
 		String redirecturi = "urn:ietf:wg:oauth:2.0:oob";
@@ -140,7 +141,7 @@ public class BigQueryConnector {
 		bqc.displayQueryResults(completedJob);
 		
 		// example using processQuery method.
-		String querySql2 = "SELECT * FROM [earth-outreach:airview.avall_two] WHERE platform_id='10293' LIMIT 10";
+		String querySql2 = "SELECT * FROM [earth-outreach:airview.avall_two] WHERE platform_id='10241' LIMIT 10";
 		System.out.println("\n\nquery2:\n------------\n"+querySql2);
 		List<TableRow> result; 
 		try{
@@ -155,6 +156,9 @@ public class BigQueryConnector {
 			System.out.println("Error occured when processing query.");
 			e.printStackTrace();
 		}
+		
+		String a = "NaN";
+		System.out.println(Double.parseDouble(a));
 	}	 
 	// [END Main]
 

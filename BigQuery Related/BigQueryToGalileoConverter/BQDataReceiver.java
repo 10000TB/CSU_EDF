@@ -9,7 +9,6 @@
  * (further implementation will be storing data into galileo, not file)
  */
 
-import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -26,29 +25,26 @@ import com.google.api.services.bigquery.model.TableCell;
 import com.google.api.services.bigquery.model.TableRow;
 
 public class BQDataReceiver {
-	
-	private BigQueryConnector bigqueryconnector;
+
 	private String TableID; // Name of the table in BigQuery
 	private String pidListPath; // Path to the file which will store platform_id list and corresponding epoch_time
 	private String tmpDataDir; // Path to the directory data will be stored
 	private int Interval; // Interval for checking update
-	
+
 	/** variables for internal use */
 	private HashMap<String, Double> tmppidlist = new HashMap<String, Double>();
-	
+
 
 	// [START Constructor]
 	/**
 	 * Constructor of BQDataReceiver
 	 * 
-	 * @param BigQueryConnector
 	 * @param TableID			Specify a table to be used
 	 * @param Interval			Specify the time in ms to sleep between tasks 
 	 * @param pidListFilePath	File path that would be used for maintaining platform id list
 	 * @param dataDirectory		directory to store data from bigquery
 	 */
-	public BQDataReceiver(BigQueryConnector bqc, String TableID, int interval, String pidListFilePath, String dataDirectory){
-		bigqueryconnector = bqc;
+	public BQDataReceiver(String TableID, int interval, String pidListFilePath, String dataDirectory){
 		this.TableID = TableID;
 		this.Interval = interval;
 		this.pidListPath = pidListFilePath;
@@ -56,6 +52,7 @@ public class BQDataReceiver {
 	}
 	// [END Constructor]
 	
+	// [START Main]
 	/**
 	 * For testing and showing usage purpose
 	 * 
@@ -64,61 +61,75 @@ public class BQDataReceiver {
 	 * @throws InterruptedException
 	 */
 	public static void main(String[] args) {
-		
+
 		// Change before use! ----------------------------
 		/** To change BigQuery ProjectID, modify BigQueryConnecor class. */
 		String ProjectID = "csumssummerproject";
-		
+
 		/** Path to the Client Secret File */
 		String CLIENTSECRETS_LOCATION = "C:/Users/pinkmaggot/Desktop/Test/OAuth/clients_secrets.json";
-		
+
 		/** Redirect_URI from Google Developers Console */
 		String REDIRECT_URI = "urn:ietf:wg:oauth:2.0:oob";
-		
+
 		/** Directory to store user credential files */
 		String TMP_DIR = "C:/Users/pinkmaggot/Desktop/Test/OAuth/bq_sample/";
-		
+
 		/** Name of the table in BigQuery */
 		String tableID = "earth-outreach:airview.avall_two";
-		
+
 		/** Path to the file which will store platform_id list and corresponding epoch_time */
 		String pidlistpath = "C:/Users/pinkmaggot/Desktop/Test/pidList.json";
-		
+
 		/** Path to the directory data will be stored */
 		String datadir = "C:/Users/pinkmaggot/Desktop/Test/";
-		
+
 		/** Interval for checking update in ms */
-		int interval = 60000;
+		int interval = 600000;
+
+		/** Host address for galileo server */
+		String galileoHostName = "austin.cs.colostate.edu";
+
+		/** Port number for galileo server */
+		int galileoPort = 5555;
 		// -----------------------------------------------
-		
+
 		// create BigQueryConnector
-		BigQueryConnector bqc = new BigQueryConnector(ProjectID, CLIENTSECRETS_LOCATION, REDIRECT_URI, TMP_DIR);
-		
-		// create BQDataReceiver
-		BQDataReceiver bqdr = new BQDataReceiver(bqc, tableID, interval, pidlistpath, datadir);
-		bqdr.start(); // start job
+		try{
+			BigQueryConnector bqc = new BigQueryConnector(ProjectID, CLIENTSECRETS_LOCATION, REDIRECT_URI, TMP_DIR);
+
+			// create GalileoConnector
+			GalileoConnector gc = new GalileoConnector(galileoHostName, galileoPort);
+
+			// create BQDataReceiver
+			BQDataReceiver bqdr = new BQDataReceiver(tableID, interval, pidlistpath, datadir);
+			bqdr.start(bqc, gc); // start job
+			gc.disconnect();
+		}catch(Exception e){
+			e.printStackTrace();
+		}
 	}
 	// [END Main]
- 
+
 	// [START start]
 	/**
 	 * Start retrieving data from bigquery table
 	 * 
 	 * @throws Exception
 	 */
-	public void start(){
+	public void start(BigQueryConnector bqc, GalileoConnector gc){
 		try {
-			initPIDList(bigqueryconnector); // Initial run
+			initPIDList(bqc, gc); // Initial run
 			System.out.println("SYSTEM: Sleep("+Interval+")ms");
 			Thread.sleep(Interval);
-			autoUpdate(bigqueryconnector); // Starting a thread...
+			autoUpdate(bqc, gc); // Starting a thread...
 		} catch (Exception e) {
 			System.out.println("Error occured. Failed to start."+e);
 			e.printStackTrace();
 		}
 	}
 	// [END start]
-	
+
 	// [START initPIDList]
 	/**
 	 * Creates an platform_id list and store it into JSON formatted file, and call retreiveData()
@@ -126,7 +137,7 @@ public class BQDataReceiver {
 	 * @param BigQueryConnector
 	 * @throws Exception
 	 */
-	private void initPIDList(BigQueryConnector bqc) throws Exception{
+	private void initPIDList(BigQueryConnector bqc, GalileoConnector gc) throws Exception{
 		System.out.println("SYSTEM: Initial platform_id list build started.");
 		Path path = Paths.get(pidListPath);
 		if (Files.exists(path)) {
@@ -150,10 +161,10 @@ public class BQDataReceiver {
 			writeJSONPIDList(tmppidlist);
 			System.out.println("SYSTEM: Initial platform_id list has created.");
 		}
-		receiveData(bqc);
+		receiveData(bqc, gc);
 	}
 	// [END initPIDList]
-	
+
 	// [START getPlatformIDList]
 	/**
 	 * Only executes a single pre-defined query, receive platform_ids from BigQuery table
@@ -168,7 +179,7 @@ public class BQDataReceiver {
 		return bqc.processQuery(querySql);
 	}
 	// [END getPlatformIDList]
-	
+
 	// [START writeJSONPIDList]
 	/**
 	 * Writes HashMap<String,Double> into json formatted file.
@@ -201,21 +212,21 @@ public class BQDataReceiver {
 	 * @param BigQueryConnector
 	 * @throws Exception
 	 */
-	private void receiveData(BigQueryConnector bqc) throws Exception{
+	private void receiveData(BigQueryConnector bqc, GalileoConnector gc) throws Exception{
 		System.out.println("SYSTEM: Retrieving data from Big Query("+TableID+")");
 		@SuppressWarnings("unused") // Because of JSONArray..
 		JSONArray tmpjsonarray = new JSONArray();
 		for(String k : tmppidlist.keySet()){
-			String querySql = "SELECT * FROM ["+TableID+"] WHERE platform_id='"+ k+"' AND epoch_time>"+tmppidlist.get(k)+" ORDER BY epoch_time ASC LIMIT 8750";
+			String querySql = "SELECT * FROM ["+TableID+"] WHERE platform_id='"+ k+"' AND datetime>"+tmppidlist.get(k)+" ORDER BY datetime ASC LIMIT 8750";
 			System.out.println(querySql);
 			long startTime = System.currentTimeMillis();
-		    long elapsedTime;
+			long elapsedTime;
 			List<TableRow> rows = bqc.processQuery(querySql);
 			if(rows==null){
 				System.out.println("SYSTEM: The data of platform_id("+k+") is up to date.");
 			}else{
-				FileWriter dataWriter = new FileWriter(tmpDataDir+k, true);
-				BufferedWriter bfWriter = new BufferedWriter(dataWriter);
+				//FileWriter dataWriter = new FileWriter(tmpDataDir+k, true);
+				//BufferedWriter bfWriter = new BufferedWriter(dataWriter);
 				double max = tmppidlist.get(k);
 				for (TableRow row : rows) {
 					int i = 0;
@@ -224,21 +235,22 @@ public class BQDataReceiver {
 						if(field.getV().toString().contains("java.lang.Object@")){
 							// quick fix for toString() on getV() method..
 							// cannot properly convert to string when its null
-							tmps+="null\t";
+							tmps+="null,";
 						}else{
-							tmps+=field.getV().toString()+"\t";
+							tmps+=field.getV().toString()+",";
 						}
 						i+=1;
-						if(i==8){
+						if(i==4){
 							double tmp = Double.parseDouble(field.getV().toString());
 							if(tmp>=max){
 								max = tmp;
 							}
 						}
 					}
-					bfWriter.write(tmps.substring(0, tmps.length()-1)+"\n");
+					gc.store(GalileoConnector.createBlock(tmps.substring(0, tmps.length()-1)));
+					//bfWriter.write(tmps.substring(0, tmps.length()-1)+"\n");
 				}
-				bfWriter.close();
+				//bfWriter.close();
 				tmppidlist.put(k, max);
 				elapsedTime = System.currentTimeMillis() - startTime;
 				System.out.println("SYSTEM: "+rows.size()+"rows / "+elapsedTime+"ms. The data of platform_id("+k+") has successfully saved to the file("+tmpDataDir+k+").");
@@ -247,7 +259,7 @@ public class BQDataReceiver {
 		writeJSONPIDList(tmppidlist);
 	}
 	// [END receiveData]
-	
+
 	// [START autoUpdate]
 	/**
 	 * Starts a thread that repeatedly check if there is any update on BigQuery table.
@@ -255,7 +267,7 @@ public class BQDataReceiver {
 	 * @param BigQueryConnector
 	 * @throws Exception
 	 */
-	private void autoUpdate(final BigQueryConnector bqc){
+	private void autoUpdate(final BigQueryConnector bqc, final GalileoConnector gc){
 		Thread t = new Thread(new Runnable() {           
 			public void run() { 
 				try {
@@ -274,7 +286,7 @@ public class BQDataReceiver {
 						if(dataUpdated){
 							writeJSONPIDList(tmppidlist);
 						}
-						receiveData(bqc);
+						receiveData(bqc, gc);
 						System.out.println("SYSTEM: Sleep("+Interval+"ms)");
 						Thread.sleep(Interval);
 					}
