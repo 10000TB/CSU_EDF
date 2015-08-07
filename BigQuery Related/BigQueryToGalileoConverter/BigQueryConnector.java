@@ -156,9 +156,6 @@ public class BigQueryConnector {
 			System.out.println("Error occured when processing query.");
 			e.printStackTrace();
 		}
-		
-		String a = "NaN";
-		System.out.println(Double.parseDouble(a));
 	}	 
 	// [END Main]
 

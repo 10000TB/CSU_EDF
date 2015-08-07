@@ -67,13 +67,12 @@ public class GalileoConnector {
 
 		TemporalProperties temporalProperties = new TemporalProperties(reformatDatetime(values[3]));
 		SpatialProperties spatialProperties = new SpatialProperties(Float.parseFloat(values[24]), Float.parseFloat(values[25]));
-		
+
 		// TODO Need to be changed
 		FeatureSet features = new FeatureSet();
 		features.put(new Feature("platform_id", values[0]));
 		features.put(new Feature("warm_box_temp", Double.parseDouble(values[14])));
 		features.put(new Feature("ch4", Double.parseDouble(values[21])));
-		features.put(new Feature("wind_dir_sdev", Double.parseDouble(values[34])));
 		features.put(new Feature("postal_code", values[37]));
 
 		Metadata metadata = new Metadata();
@@ -113,7 +112,11 @@ public class GalileoConnector {
 	 * FROM: 1.43699552323E9 TO: 143699552323
 	 */
 	private static long reformatDatetime(String data){
-		return Long.parseLong(data.replace(".", "").substring(0, data.length()-3)); 
+		String tmp = data.replace(".", "").replace("E9", "");
+		while(tmp.length()<13){
+			tmp+="0";
+		}
+		return Long.parseLong(tmp); 
 	}
 	// [END reformatDatetime]
 }

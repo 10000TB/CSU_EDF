@@ -28,7 +28,6 @@ public class BQDataReceiver {
 
 	private String TableID; // Name of the table in BigQuery
 	private String pidListPath; // Path to the file which will store platform_id list and corresponding epoch_time
-	private String tmpDataDir; // Path to the directory data will be stored
 	private int Interval; // Interval for checking update
 
 	/** variables for internal use */
@@ -42,16 +41,14 @@ public class BQDataReceiver {
 	 * @param TableID			Specify a table to be used
 	 * @param Interval			Specify the time in ms to sleep between tasks 
 	 * @param pidListFilePath	File path that would be used for maintaining platform id list
-	 * @param dataDirectory		directory to store data from bigquery
 	 */
-	public BQDataReceiver(String TableID, int interval, String pidListFilePath, String dataDirectory){
+	public BQDataReceiver(String TableID, int interval, String pidListFilePath){
 		this.TableID = TableID;
 		this.Interval = interval;
 		this.pidListPath = pidListFilePath;
-		this.tmpDataDir = dataDirectory;
 	}
 	// [END Constructor]
-	
+
 	// [START Main]
 	/**
 	 * For testing and showing usage purpose
@@ -81,9 +78,6 @@ public class BQDataReceiver {
 		/** Path to the file which will store platform_id list and corresponding epoch_time */
 		String pidlistpath = "C:/Users/pinkmaggot/Desktop/Test/pidList.json";
 
-		/** Path to the directory data will be stored */
-		String datadir = "C:/Users/pinkmaggot/Desktop/Test/";
-
 		/** Interval for checking update in ms */
 		int interval = 600000;
 
@@ -102,7 +96,7 @@ public class BQDataReceiver {
 			GalileoConnector gc = new GalileoConnector(galileoHostName, galileoPort);
 
 			// create BQDataReceiver
-			BQDataReceiver bqdr = new BQDataReceiver(tableID, interval, pidlistpath, datadir);
+			BQDataReceiver bqdr = new BQDataReceiver(tableID, interval, pidlistpath);
 			bqdr.start(bqc, gc); // start job
 			gc.disconnect();
 		}catch(Exception e){
@@ -253,7 +247,7 @@ public class BQDataReceiver {
 				//bfWriter.close();
 				tmppidlist.put(k, max);
 				elapsedTime = System.currentTimeMillis() - startTime;
-				System.out.println("SYSTEM: "+rows.size()+"rows / "+elapsedTime+"ms. The data of platform_id("+k+") has successfully saved to the file("+tmpDataDir+k+").");
+				System.out.println("SYSTEM: "+rows.size()+"rows / "+elapsedTime+"ms. The data of platform_id("+k+") has successfully saved to the file.");
 			}
 		}
 		writeJSONPIDList(tmppidlist);
