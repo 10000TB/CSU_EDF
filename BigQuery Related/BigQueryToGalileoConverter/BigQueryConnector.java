@@ -125,7 +125,7 @@ public class BigQueryConnector {
 		String redirecturi = "urn:ietf:wg:oauth:2.0:oob";
 		String datapath = "C:/Users/pinkmaggot/Desktop/Test/OAuth/bq_sample/";
 		BigQueryConnector bqc = new BigQueryConnector(projid, secretlocation, redirecturi, datapath);
-
+		
 		// Print out available datasets in the "publicdata" project to the console
 		bqc.listDatasets();
 

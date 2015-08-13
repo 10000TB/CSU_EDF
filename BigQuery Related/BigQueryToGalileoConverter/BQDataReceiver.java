@@ -222,14 +222,16 @@ public class BQDataReceiver {
 				//FileWriter dataWriter = new FileWriter(tmpDataDir+k, true);
 				//BufferedWriter bfWriter = new BufferedWriter(dataWriter);
 				double max = tmppidlist.get(k);
+				double maxplus10sec = max + 0.000000010000E9; 
+				String tmps = "";
+				boolean chk = false;
 				for (TableRow row : rows) {
 					int i = 0;
-					String tmps = "";
 					for (TableCell field : row.getF()) {
-						if(field.getV().toString().contains("java.lang.Object@")){
+						if(field.getV().toString().contains("java.lang.Object@")||field.getV().toString().contains("NaN")){
 							// quick fix for toString() on getV() method..
 							// cannot properly convert to string when its null
-							tmps+="null,";
+							tmps+="0.0,";
 						}else{
 							tmps+=field.getV().toString()+",";
 						}
@@ -239,9 +241,18 @@ public class BQDataReceiver {
 							if(tmp>=max){
 								max = tmp;
 							}
+							if(maxplus10sec<tmp){
+								chk = true;
+								maxplus10sec += 0.000000010000E9;
+							}
 						}
 					}
-					gc.store(GalileoConnector.createBlock(tmps.substring(0, tmps.length()-1)));
+					tmps+="\n";
+					if(chk){
+						gc.store(GalileoConnector.createBlock(tmps.substring(0, tmps.length()-1)));
+						tmps="";
+					}
+					
 					//bfWriter.write(tmps.substring(0, tmps.length()-1)+"\n");
 				}
 				//bfWriter.close();
