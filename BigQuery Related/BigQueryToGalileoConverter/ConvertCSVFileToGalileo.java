@@ -27,12 +27,41 @@ public class ConvertCSVFileToGalileo {
 		try {
 			inputStream = new FileInputStream(filepath);
 			sc = new Scanner(inputStream);
+			
+			double max=0.0; 
+            double maxplus10sec=0.0;  
+            String tmps = ""; 
+            boolean chk = false; 
+            boolean firstrun = true; 
+            
 			while (sc.hasNextLine()) {
 				String line = sc.nextLine();
 				if(line.startsWith("platform_id,date,")){
 					continue;
 				}
-				gc.store(GalileoConnector.createBlock(line));
+				String[] values = line.split(",");
+				
+				tmps += line+"\n";
+				
+				double tmp = Double.parseDouble(values[3]); 
+                if(firstrun){ 
+                    max = tmp; 
+                    maxplus10sec = max + 0.000000010000E9; 
+                    firstrun=false; 
+                } 
+                if(tmp>max){ 
+                    max = tmp; // to maintain pidlist.json file;
+                } 
+                if((maxplus10sec+0.000000005000E9)<tmp){ 
+                    maxplus10sec = tmp + 0.000000010000E9; // if there is an interval of more than 5 sec between row; 
+                }else if(maxplus10sec<=tmp){ 
+                    chk = true; 
+                }
+                
+                if(chk){
+                	gc.store(GalileoConnector.createBlock(tmps));
+                }
+				
 				//System.out.println(line);
 			}
 			// note that Scanner suppresses exceptions
